@@ -28,17 +28,8 @@ describe('Day 1 API scaffold', () => {
 
     assert.equal(res.status, 200)
     assert.equal(res.body.version, 'v1')
-    assert.equal(res.body.resources.products.status, 'not_implemented')
+    assert.equal(res.body.resources.products.status, 'available')
     assert.equal(res.body.resources.orders.availableFrom, 'Day 3')
-  })
-
-  it('GET /api/v1/products returns 501 until Day 2', async () => {
-    const res = await request(app).get('/api/v1/products')
-
-    assert.equal(res.status, 501)
-    assert.equal(res.body.code, 'NOT_IMPLEMENTED')
-    assert.equal(res.body.details.resource, 'products')
-    assert.ok(res.body.requestId)
   })
 
   it('DELETE /api/v1/products returns 405 with Allow', async () => {

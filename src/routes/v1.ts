@@ -18,13 +18,13 @@ v1Router
       resources: {
         products: {
           href: '/api/v1/products',
-          status: 'not_implemented',
+          status: 'available',
           availableFrom: 'Day 2',
           methods: ['GET', 'POST'],
         },
         inventory: {
           href: '/api/v1/inventory',
-          status: 'not_implemented',
+          status: 'available',
           availableFrom: 'Day 2',
           methods: ['GET', 'PATCH'],
         },
