@@ -1,0 +1,237 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-apexinventory001",
+    "name": "Apex Inventory API",
+    "description": "Week 3 — Inventory & Order Management API (Day 1).\n\n1. Arranca el servidor: `npm run dev`\n2. Importa esta colección (File → Import)\n3. `baseUrl` = http://localhost:3001\n\nLas rutas de products / inventory / orders responden 501 hasta los días 2 y 3.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001"
+    },
+    {
+      "key": "requestId",
+      "value": "bench-day-1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Ops",
+      "item": [
+        {
+          "name": "Service root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/",
+            "description": "Punteros a health y al mapa v1. Esperado: 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Request-Id",
+                "value": "{{requestId}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{baseUrl}}/api/health",
+            "description": "Liveness. Esperado: 200 `{ status: \"ok\" }` y el header `X-Request-Id` reutilizado."
+          },
+          "response": []
+        },
+        {
+          "name": "API v1 resource map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1",
+            "description": "Convenciones REST y recursos. Products/inventory/orders están `not_implemented`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Products (Day 2 stubs)",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products",
+            "description": "Contrato definido, aún sin implementación. Esperado: 501 NOT_IMPLEMENTED."
+          },
+          "response": []
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"TEE-001\",\n  \"name\": \"Coast tee\",\n  \"priceCents\": 2800\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/products",
+            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 2)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get product by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/prod_1",
+            "description": "Esperado: 501 NOT_IMPLEMENTED."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory (Day 2 stubs)",
+      "item": [
+        {
+          "name": "List inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/inventory",
+            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 2)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get stock by SKU",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/inventory/TEE-001",
+            "description": "Esperado: 501 NOT_IMPLEMENTED."
+          },
+          "response": []
+        },
+        {
+          "name": "Adjust stock",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": -1\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/inventory/TEE-001",
+            "description": "Ajuste de stock. Esperado: 501 NOT_IMPLEMENTED (Day 2)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders (Day 3 stubs)",
+      "item": [
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 3)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"sku\": \"TEE-001\", \"quantity\": 2 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/orders",
+            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 3)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get order by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/ord_1",
+            "description": "Esperado: 501 NOT_IMPLEMENTED."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error cases",
+      "item": [
+        {
+          "name": "Not found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/unknown",
+            "description": "Ruta inexistente. Esperado: 404 `{ code: \"NOT_FOUND\" }`."
+          },
+          "response": []
+        },
+        {
+          "name": "Method not allowed (405)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products",
+            "description": "DELETE no está en el contrato. Esperado: 405 y header `Allow: GET, POST`."
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid JSON (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"sku\":"
+            },
+            "url": "{{baseUrl}}/api/v1/products",
+            "description": "Body malformado. Esperado: 400 `{ code: \"INVALID_JSON\" }`."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
