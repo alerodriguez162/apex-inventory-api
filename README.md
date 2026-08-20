@@ -31,6 +31,8 @@ src/
 - Plural nouns: `/products`, `/inventory`, `/orders`
 - Filter with query params — never verbs in the path
 - Lists support `?page=` and `?limit=` (default 20, max 100)
+- Collection responses include `X-Total-Count`, `X-Page`, `X-Limit`, `X-Total-Pages`, and `Link`
+- `POST /api/v1/orders` accepts optional `Idempotency-Key` (8–128 chars); replays return `200` + `Idempotent-Replay: true`
 - Every response can be correlated with `X-Request-Id`
 - Errors: `{ "error", "code", "requestId" }` plus `details` when useful
 - Unsupported methods return **405** with an `Allow` header

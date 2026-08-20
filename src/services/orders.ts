@@ -16,6 +16,7 @@ type OrderRow = {
   status: OrderStatus
   total_cents: number
   idempotency_key: string | null
+  request_hash: string | null
   created_at: string
   updated_at: string
 }
@@ -60,7 +61,7 @@ function loadOrderItems(orderId: string): OrderItem[] {
 function getOrderRow(id: string): OrderRow | undefined {
   return db
     .prepare(
-      `SELECT id, status, total_cents, idempotency_key, created_at, updated_at
+      `SELECT id, status, total_cents, idempotency_key, request_hash, created_at, updated_at
        FROM orders WHERE id = ?`,
     )
     .get(id) as OrderRow | undefined
@@ -75,16 +76,15 @@ export function getOrderById(id: string): Order {
   return mapOrder(row, loadOrderItems(id))
 }
 
-export function findOrderByIdempotencyKey(key: string): Order | null {
+export function findOrderByIdempotencyKey(key: string): OrderRow | null {
   const row = db
     .prepare(
-      `SELECT id, status, total_cents, idempotency_key, created_at, updated_at
+      `SELECT id, status, total_cents, idempotency_key, request_hash, created_at, updated_at
        FROM orders WHERE idempotency_key = ?`,
     )
     .get(key) as OrderRow | undefined
 
-  if (!row) return null
-  return mapOrder(row, loadOrderItems(row.id))
+  return row ?? null
 }
 
 export function listOrders(
@@ -109,7 +109,7 @@ export function listOrders(
   const offset = (pagination.page - 1) * pagination.limit
   const rows = db
     .prepare(
-      `SELECT id, status, total_cents, idempotency_key, created_at, updated_at
+      `SELECT id, status, total_cents, idempotency_key, request_hash, created_at, updated_at
        FROM orders
        ${where}
        ORDER BY created_at DESC
@@ -143,12 +143,27 @@ function mergeLineItems(
 
 export function createOrder(
   input: CreateOrderInput,
-  options: { idempotencyKey?: string } = {},
+  options: { idempotencyKey?: string; requestHash?: string } = {},
 ): { order: Order; replayed: boolean } {
   if (options.idempotencyKey) {
     const existing = findOrderByIdempotencyKey(options.idempotencyKey)
     if (existing) {
-      return { order: existing, replayed: true }
+      if (
+        options.requestHash &&
+        existing.request_hash &&
+        existing.request_hash !== options.requestHash
+      ) {
+        throw new AppError(
+          409,
+          'IDEMPOTENCY_KEY_REUSE',
+          'Idempotency-Key was already used with a different request body',
+        )
+      }
+
+      return {
+        order: mapOrder(existing, loadOrderItems(existing.id)),
+        replayed: true,
+      }
     }
   }
 
@@ -193,12 +208,13 @@ export function createOrder(
     }
 
     db.prepare(
-      `INSERT INTO orders (id, status, total_cents, idempotency_key, created_at, updated_at)
-       VALUES (@id, 'confirmed', @totalCents, @idempotencyKey, @createdAt, @updatedAt)`,
+      `INSERT INTO orders (id, status, total_cents, idempotency_key, request_hash, created_at, updated_at)
+       VALUES (@id, 'confirmed', @totalCents, @idempotencyKey, @requestHash, @createdAt, @updatedAt)`,
     ).run({
       id: orderId,
       totalCents,
       idempotencyKey: options.idempotencyKey ?? null,
+      requestHash: options.requestHash ?? null,
       createdAt: timestamp,
       updatedAt: timestamp,
     })
@@ -242,7 +258,22 @@ export function createOrder(
     ) {
       const existing = findOrderByIdempotencyKey(options.idempotencyKey)
       if (existing) {
-        return { order: existing, replayed: true }
+        if (
+          options.requestHash &&
+          existing.request_hash &&
+          existing.request_hash !== options.requestHash
+        ) {
+          throw new AppError(
+            409,
+            'IDEMPOTENCY_KEY_REUSE',
+            'Idempotency-Key was already used with a different request body',
+          )
+        }
+
+        return {
+          order: mapOrder(existing, loadOrderItems(existing.id)),
+          replayed: true,
+        }
       }
     }
     throw err

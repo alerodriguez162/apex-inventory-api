@@ -1,4 +1,6 @@
 import { Router } from 'express'
+import { AppError } from '../errors/app-error.js'
+import { setPaginationHeaders } from '../http/pagination.js'
 import { methodNotAllowed } from '../middleware/method-not-allowed.js'
 import {
   getInventoryBySku,
@@ -19,15 +21,12 @@ inventoryRouter
       req.query.threshold !== undefined ? Number(req.query.threshold) : undefined
 
     if (threshold !== undefined && (!Number.isInteger(threshold) || threshold < 0)) {
-      res.status(400).json({
-        error: 'threshold must be a non-negative integer',
-        code: 'VALIDATION_ERROR',
-        requestId: req.requestId,
-      })
-      return
+      throw new AppError(400, 'VALIDATION_ERROR', 'threshold must be a non-negative integer')
     }
 
-    res.json(listInventory(pagination, { lowStock, threshold }))
+    const result = listInventory(pagination, { lowStock, threshold })
+    setPaginationHeaders(req, res, result)
+    res.json(result)
   })
   .all(methodNotAllowed(['GET']))
 

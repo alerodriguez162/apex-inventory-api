@@ -31,6 +31,12 @@ if (dbPath !== ':memory:') {
 }
 db.pragma('foreign_keys = ON')
 
+try {
+  db.exec(`ALTER TABLE orders ADD COLUMN request_hash TEXT`)
+} catch {
+  // column already exists on fresh schemas
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
@@ -55,6 +61,7 @@ db.exec(`
     status TEXT NOT NULL CHECK (status IN ('pending', 'confirmed', 'cancelled')),
     total_cents INTEGER NOT NULL CHECK (total_cents >= 0),
     idempotency_key TEXT UNIQUE,
+    request_hash TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );

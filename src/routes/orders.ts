@@ -1,4 +1,10 @@
 import { Router } from 'express'
+import { AppError } from '../errors/app-error.js'
+import {
+  hashRequestBody,
+  parseIdempotencyKey,
+  setPaginationHeaders,
+} from '../http/pagination.js'
 import { methodNotAllowed } from '../middleware/method-not-allowed.js'
 import {
   cancelOrder,
@@ -8,7 +14,6 @@ import {
 } from '../services/orders.js'
 import type { OrderStatus } from '../types/domain.js'
 import { createOrderSchema, parsePagination, validateBody } from '../validation.js'
-import { AppError } from '../errors/app-error.js'
 
 const ORDER_STATUSES = new Set<OrderStatus>(['pending', 'confirmed', 'cancelled'])
 
@@ -24,15 +29,16 @@ ordersRouter
       throw new AppError(400, 'VALIDATION_ERROR', 'status must be pending, confirmed, or cancelled')
     }
 
-    res.json(
-      listOrders(pagination, {
-        status: statusRaw as OrderStatus | undefined,
-      }),
-    )
+    const result = listOrders(pagination, {
+      status: statusRaw as OrderStatus | undefined,
+    })
+    setPaginationHeaders(req, res, result)
+    res.json(result)
   })
   .post(validateBody(createOrderSchema), (req, res) => {
-    const idempotencyKey = req.header('idempotency-key')?.trim() || undefined
-    const { order, replayed } = createOrder(req.body, { idempotencyKey })
+    const idempotencyKey = parseIdempotencyKey(req)
+    const requestHash = idempotencyKey ? hashRequestBody(req.body) : undefined
+    const { order, replayed } = createOrder(req.body, { idempotencyKey, requestHash })
 
     if (replayed) {
       res.setHeader('Idempotent-Replay', 'true')
