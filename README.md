@@ -60,8 +60,10 @@ Workflow: one branch per day → merge into `main` at end of day.
 | GET | `/api/v1/inventory` | 200 | Stock list (`lowStock`, `threshold`) |
 | GET | `/api/v1/inventory/:sku` | 200 | Stock by SKU (`available = quantity - reserved`) |
 | PATCH | `/api/v1/inventory/:sku` | 200 | Set `quantity` or apply `delta` |
-| GET, POST | `/api/v1/orders` | 501 | Orders (Day 3) |
-| GET | `/api/v1/orders/:id` | 501 | Order by id (Day 3) |
+| GET | `/api/v1/orders` | 200 | List orders (`status`, pagination) |
+| POST | `/api/v1/orders` | 201 | Create order and reserve stock |
+| GET | `/api/v1/orders/:id` | 200 | Order by id |
+| POST | `/api/v1/orders/:id/cancellation` | 200 | Cancel order and release reservation |
 
 ## Getting started
 

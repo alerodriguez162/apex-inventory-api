@@ -6,6 +6,10 @@ import Database from 'better-sqlite3'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function resolveDbPath(): string {
+  if (process.env.SQLITE_PATH === ':memory:') {
+    return ':memory:'
+  }
+
   if (process.env.SQLITE_PATH) {
     return path.resolve(process.env.SQLITE_PATH)
   }
@@ -22,7 +26,9 @@ function resolveDbPath(): string {
 const dbPath = resolveDbPath()
 export const db = new Database(dbPath)
 
-db.pragma('journal_mode = WAL')
+if (dbPath !== ':memory:') {
+  db.pragma('journal_mode = WAL')
+}
 db.pragma('foreign_keys = ON')
 
 db.exec(`

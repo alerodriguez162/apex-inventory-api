@@ -30,7 +30,7 @@ v1Router
         },
         orders: {
           href: '/api/v1/orders',
-          status: 'not_implemented',
+          status: 'available',
           availableFrom: 'Day 3',
           methods: ['GET', 'POST'],
         },

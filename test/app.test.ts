@@ -29,7 +29,7 @@ describe('Day 1 API scaffold', () => {
     assert.equal(res.status, 200)
     assert.equal(res.body.version, 'v1')
     assert.equal(res.body.resources.products.status, 'available')
-    assert.equal(res.body.resources.orders.availableFrom, 'Day 3')
+    assert.equal(res.body.resources.orders.status, 'available')
   })
 
   it('DELETE /api/v1/products returns 405 with Allow', async () => {
