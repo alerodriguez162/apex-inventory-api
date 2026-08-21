@@ -3,6 +3,6 @@ export const config = {
   env: process.env.NODE_ENV ?? 'development',
   corsOrigin: process.env.CORS_ORIGIN ?? '*',
   service: 'apex-inventory-api',
-  version: '0.4.0',
+  version: '1.0.0',
   jsonBodyLimit: '32kb',
 } as const

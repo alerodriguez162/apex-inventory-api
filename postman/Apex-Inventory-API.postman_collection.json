@@ -2,18 +2,15 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-apexinventory001",
     "name": "Apex Inventory API",
-    "description": "Week 3 — Inventory & Order Management API (Day 1).\n\n1. Arranca el servidor: `npm run dev`\n2. Importa esta colección (File → Import)\n3. `baseUrl` = http://localhost:3001\n\nLas rutas de products / inventory / orders responden 501 hasta los días 2 y 3.",
+    "description": "Week 3 — Inventory & Order Management API (Days 1–5).\n\n1. `npm run seed && npm run dev`\n2. Import this collection\n3. baseUrl = http://localhost:3001\n\nDocs: {{baseUrl}}/api/docs",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3001"
-    },
-    {
-      "key": "requestId",
-      "value": "bench-day-1"
-    }
+    { "key": "baseUrl", "value": "http://localhost:3001" },
+    { "key": "requestId", "value": "bench-day-5" },
+    { "key": "idempotencyKey", "value": "bench-order-key-01" },
+    { "key": "productId", "value": "" },
+    { "key": "orderId", "value": "" }
   ],
   "item": [
     {
@@ -21,171 +18,168 @@
       "item": [
         {
           "name": "Service root",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/",
-            "description": "Punteros a health y al mapa v1. Esperado: 200."
-          },
-          "response": []
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/" }
         },
         {
           "name": "Health",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "X-Request-Id",
-                "value": "{{requestId}}",
-                "type": "text"
-              }
-            ],
-            "url": "{{baseUrl}}/api/health",
-            "description": "Liveness. Esperado: 200 `{ status: \"ok\" }` y el header `X-Request-Id` reutilizado."
-          },
-          "response": []
+            "header": [{ "key": "X-Request-Id", "value": "{{requestId}}" }],
+            "url": "{{baseUrl}}/api/health"
+          }
         },
         {
-          "name": "API v1 resource map",
+          "name": "API v1 map",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1" }
+        },
+        {
+          "name": "OpenAPI JSON",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1",
-            "description": "Convenciones REST y recursos. Products/inventory/orders están `not_implemented`."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/docs/openapi.json"
+          }
         }
       ]
     },
     {
-      "name": "Products (Day 2 stubs)",
+      "name": "Products",
       "item": [
+        {
+          "name": "Create product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('productId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"TEE-001\",\n  \"name\": \"Coast tee\",\n  \"description\": \"Soft cotton tee\",\n  \"priceCents\": 2800,\n  \"initialStock\": 40\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/products"
+          }
+        },
         {
           "name": "List products",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products",
-            "description": "Contrato definido, aún sin implementación. Esperado: 501 NOT_IMPLEMENTED."
-          },
-          "response": []
-        },
-        {
-          "name": "Create product",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sku\": \"TEE-001\",\n  \"name\": \"Coast tee\",\n  \"priceCents\": 2800\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/products",
-            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 2)."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/products?page=1&limit=20&q=tee"
+          }
         },
         {
           "name": "Get product by id",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/prod_1",
-            "description": "Esperado: 501 NOT_IMPLEMENTED."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}"
+          }
         }
       ]
     },
     {
-      "name": "Inventory (Day 2 stubs)",
+      "name": "Inventory",
       "item": [
         {
           "name": "List inventory",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/inventory",
-            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 2)."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/inventory?page=1&limit=20"
+          }
         },
         {
           "name": "Get stock by SKU",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/inventory/TEE-001",
-            "description": "Esperado: 501 NOT_IMPLEMENTED."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/inventory/TEE-001"
+          }
         },
         {
-          "name": "Adjust stock",
+          "name": "Adjust stock (delta)",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"delta\": -1\n}"
-            },
-            "url": "{{baseUrl}}/api/v1/inventory/TEE-001",
-            "description": "Ajuste de stock. Esperado: 501 NOT_IMPLEMENTED (Day 2)."
-          },
-          "response": []
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"delta\": -2\n}" },
+            "url": "{{baseUrl}}/api/v1/inventory/TEE-001"
+          }
+        },
+        {
+          "name": "Low stock filter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/inventory?lowStock=true&threshold=10"
+          }
         }
       ]
     },
     {
-      "name": "Orders (Day 3 stubs)",
+      "name": "Orders",
       "item": [
         {
-          "name": "List orders",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/orders",
-            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 3)."
-          },
-          "response": []
-        },
-        {
           "name": "Create order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('orderId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [\n    { \"sku\": \"TEE-001\", \"quantity\": 2 }\n  ]\n}"
             },
-            "url": "{{baseUrl}}/api/v1/orders",
-            "description": "Esperado: 501 NOT_IMPLEMENTED (Day 3)."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/orders"
+          }
+        },
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders?page=1&limit=20"
+          }
         },
         {
           "name": "Get order by id",
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/orders/ord_1",
-            "description": "Esperado: 501 NOT_IMPLEMENTED."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Cancel order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/cancellation"
+          }
         }
       ]
     },
@@ -197,39 +191,25 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/unknown",
-            "description": "Ruta inexistente. Esperado: 404 `{ code: \"NOT_FOUND\" }`."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/unknown"
+          }
         },
         {
           "name": "Method not allowed (405)",
           "request": {
             "method": "DELETE",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products",
-            "description": "DELETE no está en el contrato. Esperado: 405 y header `Allow: GET, POST`."
-          },
-          "response": []
+            "url": "{{baseUrl}}/api/v1/products"
+          }
         },
         {
           "name": "Invalid JSON (400)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"sku\":"
-            },
-            "url": "{{baseUrl}}/api/v1/products",
-            "description": "Body malformado. Esperado: 400 `{ code: \"INVALID_JSON\" }`."
-          },
-          "response": []
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"sku\":" },
+            "url": "{{baseUrl}}/api/v1/products"
+          }
         }
       ]
     }
