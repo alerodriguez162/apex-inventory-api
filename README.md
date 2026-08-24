@@ -90,6 +90,13 @@ docker run --rm -p 3001:3001 -e PORT=3001 apex-inventory-api
 
 SQLite file lives inside the container unless you mount a volume on `/app/data`.
 
+## Live
+
+- **Production:** https://apex-inventory-api.vercel.app
+- **Docs:** https://apex-inventory-api.vercel.app/api/docs
+- **Health:** https://apex-inventory-api.vercel.app/api/health
+- **Repo:** https://github.com/alerodriguez162/apex-inventory-api
+
 ## Deploy notes
 
 This API uses native SQLite (`better-sqlite3`).
