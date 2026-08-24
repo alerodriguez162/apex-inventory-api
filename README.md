@@ -46,13 +46,26 @@ test/          Node.js test runner suites
 | GET | `/api/health` | Liveness |
 | GET | `/api/docs` | Swagger UI |
 | GET | `/api/docs/openapi.json` | OpenAPI document |
-| GET/POST | `/api/v1/products` | Catalog |
-| GET | `/api/v1/products/:id` | Product by id |
+| GET/POST | `/api/v1/products` | Catalog (`q`, `sku`, `sort`, pagination) |
+| GET/PATCH | `/api/v1/products/:id` | Product by id / update fields |
 | GET | `/api/v1/inventory` | Stock list (`lowStock`) |
 | GET/PATCH | `/api/v1/inventory/:sku` | Stock by SKU |
-| GET/POST | `/api/v1/orders` | Orders (+ reserve stock) |
+| GET/POST | `/api/v1/orders` | Orders (+ atomic reserve) |
 | GET | `/api/v1/orders/:id` | Order by id |
 | POST | `/api/v1/orders/:id/cancellation` | Cancel + release reservation |
+| POST | `/api/v1/orders/:id/fulfillment` | Fulfill + deduct on-hand stock |
+| GET | `/api/v1/stats` | Aggregate catalog / stock / order counts |
+
+### Order lifecycle
+
+`confirmed` (on create, stock reserved) → `fulfilled` (stock deducted) **or** `cancelled` (reservation released).
+
+### Hardening
+
+- Atomic `UPDATE … WHERE (quantity - reserved) >= n` for reservations
+- Gzip compression + Helmet + rate limit (disabled in tests)
+- `Location` header on `201` creates
+- Zod moved to runtime dependencies
 
 ## Getting started
 
@@ -79,4 +92,13 @@ SQLite file lives inside the container unless you mount a volume on `/app/data`.
 
 ## Deploy notes
 
-This API uses native SQLite (`better-sqlite3`), so prefer a long-running host (Docker, Railway, Render, Fly.io) rather than ephemeral serverless. Set `PORT` and optionally `SQLITE_PATH` / `CORS_ORIGIN`.
+This API uses native SQLite (`better-sqlite3`).
+
+- **Local / Docker:** persistent file under `data/` (or a mounted volume).
+- **Vercel:** SQLite lives in `/tmp` (ephemeral per instance). Demo catalog seeds automatically when empty.
+
+```bash
+npx vercel --prod
+```
+
+Set `PORT` / `CORS_ORIGIN` / `RATE_LIMIT_*` as needed in the Vercel project env.

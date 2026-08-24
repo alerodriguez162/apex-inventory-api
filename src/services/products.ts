@@ -7,6 +7,8 @@ import type {
   Paginated,
   Pagination,
   Product,
+  ProductSort,
+  UpdateProductInput,
 } from '../types/domain.js'
 
 type ProductRow = {
@@ -48,9 +50,18 @@ function mapInventory(row: InventoryRow): InventoryItem {
   }
 }
 
+const SORT_SQL: Record<ProductSort, string> = {
+  created_at_desc: 'created_at DESC',
+  created_at_asc: 'created_at ASC',
+  name_asc: 'name COLLATE NOCASE ASC',
+  name_desc: 'name COLLATE NOCASE DESC',
+  price_asc: 'price_cents ASC',
+  price_desc: 'price_cents DESC',
+}
+
 export function listProducts(
   pagination: Pagination,
-  filters: { q?: string; sku?: string } = {},
+  filters: { q?: string; sku?: string; sort?: ProductSort } = {},
 ): Paginated<Product> {
   const clauses: string[] = []
   const params: Record<string, string | number> = {}
@@ -66,6 +77,7 @@ export function listProducts(
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
+  const orderBy = SORT_SQL[filters.sort ?? 'created_at_desc']
   const total = (
     db.prepare(`SELECT COUNT(*) AS count FROM products ${where}`).get(params) as {
       count: number
@@ -78,7 +90,7 @@ export function listProducts(
       `SELECT id, sku, name, description, price_cents, created_at, updated_at
        FROM products
        ${where}
-       ORDER BY created_at DESC
+       ORDER BY ${orderBy}
        LIMIT @limit OFFSET @offset`,
     )
     .all({ ...params, limit: pagination.limit, offset }) as ProductRow[]
@@ -89,7 +101,7 @@ export function listProducts(
       page: pagination.page,
       limit: pagination.limit,
       total,
-      totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+      totalPages: Math.max(1, Math.ceil(total / pagination.limit) || 1),
     },
   }
 }
@@ -158,6 +170,31 @@ export function createProduct(input: CreateProductInput): Product {
   return getProductById(id)
 }
 
+export function updateProduct(id: string, input: UpdateProductInput): Product {
+  const current = getProductById(id)
+  const timestamp = nowIso()
+
+  db.prepare(
+    `UPDATE products
+     SET name = @name,
+         description = @description,
+         price_cents = @priceCents,
+         updated_at = @updatedAt
+     WHERE id = @id`,
+  ).run({
+    id,
+    name: input.name?.trim() ?? current.name,
+    description:
+      input.description === undefined
+        ? current.description
+        : input.description?.trim() || null,
+    priceCents: input.priceCents ?? current.priceCents,
+    updatedAt: timestamp,
+  })
+
+  return getProductById(id)
+}
+
 export function listInventory(
   pagination: Pagination,
   filters: { lowStock?: boolean; threshold?: number } = {},
@@ -195,7 +232,7 @@ export function listInventory(
       page: pagination.page,
       limit: pagination.limit,
       total,
-      totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+      totalPages: Math.max(1, Math.ceil(total / pagination.limit) || 1),
     },
   }
 }
@@ -243,10 +280,82 @@ export function updateInventory(
   }
 
   const timestamp = nowIso()
-  db.prepare(
-    `UPDATE inventory SET quantity = @quantity, updated_at = @updatedAt
-     WHERE sku = @sku COLLATE NOCASE`,
-  ).run({ sku, quantity: nextQuantity, updatedAt: timestamp })
+  const result = db
+    .prepare(
+      `UPDATE inventory SET quantity = @quantity, updated_at = @updatedAt
+       WHERE sku = @sku COLLATE NOCASE AND reserved <= @quantity`,
+    )
+    .run({ sku, quantity: nextQuantity, updatedAt: timestamp })
+
+  if (result.changes === 0) {
+    throw new AppError(
+      409,
+      'STOCK_BELOW_RESERVED',
+      `Cannot set quantity below reserved amount (${current.reserved})`,
+    )
+  }
 
   return getInventoryBySku(sku)
+}
+
+/** Atomically reserve stock; safe under concurrent writers in the same process. */
+export function reserveStock(sku: string, quantity: number, updatedAt: string): void {
+  const result = db
+    .prepare(
+      `UPDATE inventory
+       SET reserved = reserved + @quantity, updated_at = @updatedAt
+       WHERE sku = @sku COLLATE NOCASE
+         AND (quantity - reserved) >= @quantity`,
+    )
+    .run({ sku, quantity, updatedAt })
+
+  if (result.changes === 0) {
+    const stock = getInventoryBySku(sku)
+    throw new AppError(409, 'INSUFFICIENT_STOCK', `Insufficient stock for SKU ${sku}`, {
+      sku,
+      requested: quantity,
+      available: stock.available,
+    })
+  }
+}
+
+export function releaseReservedStock(
+  sku: string,
+  quantity: number,
+  updatedAt: string,
+): void {
+  const result = db
+    .prepare(
+      `UPDATE inventory
+       SET reserved = reserved - @quantity, updated_at = @updatedAt
+       WHERE sku = @sku COLLATE NOCASE AND reserved >= @quantity`,
+    )
+    .run({ sku, quantity, updatedAt })
+
+  if (result.changes === 0) {
+    throw new AppError(409, 'RESERVATION_MISMATCH', `Cannot release reservation for SKU ${sku}`)
+  }
+}
+
+/** Convert reserved units into shipped units (quantity and reserved both drop). */
+export function fulfillReservedStock(
+  sku: string,
+  quantity: number,
+  updatedAt: string,
+): void {
+  const result = db
+    .prepare(
+      `UPDATE inventory
+       SET quantity = quantity - @quantity,
+           reserved = reserved - @quantity,
+           updated_at = @updatedAt
+       WHERE sku = @sku COLLATE NOCASE
+         AND reserved >= @quantity
+         AND quantity >= @quantity`,
+    )
+    .run({ sku, quantity, updatedAt })
+
+  if (result.changes === 0) {
+    throw new AppError(409, 'FULFILLMENT_FAILED', `Cannot fulfill reservation for SKU ${sku}`)
+  }
 }

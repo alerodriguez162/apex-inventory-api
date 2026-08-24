@@ -16,7 +16,7 @@ export type InventoryItem = {
   updatedAt: string
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'cancelled'
+export type OrderStatus = 'pending' | 'confirmed' | 'cancelled' | 'fulfilled'
 
 export type OrderItem = {
   sku: string
@@ -42,6 +42,12 @@ export type CreateProductInput = {
   initialStock?: number
 }
 
+export type UpdateProductInput = {
+  name?: string
+  description?: string | null
+  priceCents?: number
+}
+
 export type UpdateInventoryInput = {
   quantity?: number
   delta?: number
@@ -50,6 +56,14 @@ export type UpdateInventoryInput = {
 export type CreateOrderInput = {
   items: Array<{ sku: string; quantity: number }>
 }
+
+export type ProductSort =
+  | 'created_at_desc'
+  | 'created_at_asc'
+  | 'name_asc'
+  | 'name_desc'
+  | 'price_asc'
+  | 'price_desc'
 
 export type Pagination = {
   page: number
@@ -64,4 +78,16 @@ export type Paginated<T> = {
     total: number
     totalPages: number
   }
+}
+
+export type ApiStats = {
+  products: number
+  inventory: {
+    skus: number
+    unitsOnHand: number
+    unitsReserved: number
+    unitsAvailable: number
+    lowStockSkus: number
+  }
+  orders: Record<OrderStatus, number>
 }

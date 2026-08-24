@@ -9,13 +9,19 @@ import { methodNotAllowed } from '../middleware/method-not-allowed.js'
 import {
   cancelOrder,
   createOrder,
+  fulfillOrder,
   getOrderById,
   listOrders,
 } from '../services/orders.js'
 import type { OrderStatus } from '../types/domain.js'
 import { createOrderSchema, parsePagination, validateBody } from '../validation.js'
 
-const ORDER_STATUSES = new Set<OrderStatus>(['pending', 'confirmed', 'cancelled'])
+const ORDER_STATUSES = new Set<OrderStatus>([
+  'pending',
+  'confirmed',
+  'cancelled',
+  'fulfilled',
+])
 
 export const ordersRouter = Router()
 
@@ -26,7 +32,11 @@ ordersRouter
     const statusRaw = typeof req.query.status === 'string' ? req.query.status : undefined
 
     if (statusRaw && !ORDER_STATUSES.has(statusRaw as OrderStatus)) {
-      throw new AppError(400, 'VALIDATION_ERROR', 'status must be pending, confirmed, or cancelled')
+      throw new AppError(
+        400,
+        'VALIDATION_ERROR',
+        'status must be pending, confirmed, cancelled, or fulfilled',
+      )
     }
 
     const result = listOrders(pagination, {
@@ -46,6 +56,7 @@ ordersRouter
       return
     }
 
+    res.setHeader('Location', `/api/v1/orders/${order.id}`)
     res.status(201).json(order)
   })
   .all(methodNotAllowed(['GET', 'POST']))
@@ -61,5 +72,12 @@ ordersRouter
   .route('/:id/cancellation')
   .post((req, res) => {
     res.json(cancelOrder(req.params.id))
+  })
+  .all(methodNotAllowed(['POST']))
+
+ordersRouter
+  .route('/:id/fulfillment')
+  .post((req, res) => {
+    res.json(fulfillOrder(req.params.id))
   })
   .all(methodNotAllowed(['POST']))

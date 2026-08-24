@@ -14,25 +14,32 @@ v1Router
         errors: '{ error, code, requestId }',
         versioning: 'URI prefix /api/v1',
         naming: 'plural nouns, no verbs in paths',
+        orderLifecycle: 'confirmed → fulfilled | cancelled',
       },
       resources: {
         products: {
           href: '/api/v1/products',
           status: 'available',
-          availableFrom: 'Day 2',
-          methods: ['GET', 'POST'],
+          methods: ['GET', 'POST', 'PATCH'],
         },
         inventory: {
           href: '/api/v1/inventory',
           status: 'available',
-          availableFrom: 'Day 2',
           methods: ['GET', 'PATCH'],
         },
         orders: {
           href: '/api/v1/orders',
           status: 'available',
-          availableFrom: 'Day 3',
           methods: ['GET', 'POST'],
+          actions: {
+            cancellation: 'POST /api/v1/orders/:id/cancellation',
+            fulfillment: 'POST /api/v1/orders/:id/fulfillment',
+          },
+        },
+        stats: {
+          href: '/api/v1/stats',
+          status: 'available',
+          methods: ['GET'],
         },
       },
     })

@@ -1,9 +1,10 @@
 openapi: 3.0.3
 info:
   title: Apex Inventory & Order Management API
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    Week 3 bench project — products, inventory, and orders with stock reservation.
+    Week 3 bench project — products, inventory, and orders with atomic stock reservation,
+    fulfillment, pagination, and idempotent creates.
   contact:
     name: alerodriguez162
 servers:
@@ -37,6 +38,17 @@ paths:
         - name: sku
           in: query
           schema: { type: string }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - created_at_desc
+              - created_at_asc
+              - name_asc
+              - name_desc
+              - price_asc
+              - price_desc
       responses:
         '200':
           description: Paginated products
@@ -68,6 +80,27 @@ paths:
       responses:
         '200':
           description: Product
+        '404':
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Products]
+      summary: Update product fields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProduct'
+      responses:
+        '200':
+          description: Updated product
+        '400':
+          $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
   /api/v1/inventory:
@@ -180,6 +213,31 @@ paths:
       responses:
         '200':
           description: Cancelled order
+  /api/v1/orders/{id}/fulfillment:
+    post:
+      tags: [Orders]
+      summary: Fulfill order (deduct on-hand + reserved stock)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Fulfilled order
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/stats:
+    get:
+      tags: [Ops]
+      summary: Aggregate inventory and order stats
+      parameters:
+        - name: threshold
+          in: query
+          schema: { type: integer, minimum: 0, default: 5 }
+      responses:
+        '200':
+          description: Stats snapshot
 components:
   parameters:
     Page:
@@ -200,6 +258,12 @@ components:
         description: { type: string, nullable: true }
         priceCents: { type: integer, minimum: 0 }
         initialStock: { type: integer, minimum: 0 }
+    UpdateProduct:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        priceCents: { type: integer, minimum: 0 }
     UpdateInventory:
       type: object
       properties:

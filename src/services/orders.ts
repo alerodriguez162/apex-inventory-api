@@ -9,7 +9,12 @@ import type {
   Paginated,
   Pagination,
 } from '../types/domain.js'
-import { getInventoryBySku, getProductBySku } from './products.js'
+import {
+  fulfillReservedStock,
+  getProductBySku,
+  releaseReservedStock,
+  reserveStock,
+} from './products.js'
 
 type OrderRow = {
   id: string
@@ -123,7 +128,7 @@ export function listOrders(
       page: pagination.page,
       limit: pagination.limit,
       total,
-      totalPages: Math.max(1, Math.ceil(total / pagination.limit)),
+      totalPages: Math.max(1, Math.ceil(total / pagination.limit) || 1),
     },
   }
 }
@@ -185,20 +190,6 @@ export function createOrder(
         throw new AppError(404, 'PRODUCT_NOT_FOUND', `No product for SKU ${line.sku}`)
       }
 
-      const stock = getInventoryBySku(line.sku)
-      if (stock.available < line.quantity) {
-        throw new AppError(
-          409,
-          'INSUFFICIENT_STOCK',
-          `Insufficient stock for SKU ${line.sku}`,
-          {
-            sku: line.sku,
-            requested: line.quantity,
-            available: stock.available,
-          },
-        )
-      }
-
       priced.push({
         sku: product.sku,
         quantity: line.quantity,
@@ -223,11 +214,6 @@ export function createOrder(
       `INSERT INTO order_items (order_id, sku, quantity, unit_price_cents)
        VALUES (@orderId, @sku, @quantity, @unitPriceCents)`,
     )
-    const reserve = db.prepare(
-      `UPDATE inventory
-       SET reserved = reserved + @quantity, updated_at = @updatedAt
-       WHERE sku = @sku COLLATE NOCASE`,
-    )
 
     for (const line of priced) {
       insertItem.run({
@@ -236,11 +222,7 @@ export function createOrder(
         quantity: line.quantity,
         unitPriceCents: line.unitPriceCents,
       })
-      reserve.run({
-        sku: line.sku,
-        quantity: line.quantity,
-        updatedAt: timestamp,
-      })
+      reserveStock(line.sku, line.quantity, timestamp)
     }
 
     return getOrderById(orderId)
@@ -287,6 +269,10 @@ export function cancelOrder(id: string): Order {
     return order
   }
 
+  if (order.status === 'fulfilled') {
+    throw new AppError(409, 'ORDER_NOT_CANCELLABLE', 'Fulfilled orders cannot be cancelled')
+  }
+
   if (order.status !== 'confirmed' && order.status !== 'pending') {
     throw new AppError(409, 'ORDER_NOT_CANCELLABLE', `Cannot cancel order in status ${order.status}`)
   }
@@ -298,22 +284,44 @@ export function cancelOrder(id: string): Order {
       `UPDATE orders SET status = 'cancelled', updated_at = @updatedAt WHERE id = @id`,
     ).run({ id, updatedAt: timestamp })
 
-    const release = db.prepare(
-      `UPDATE inventory
-       SET reserved = reserved - @quantity, updated_at = @updatedAt
-       WHERE sku = @sku COLLATE NOCASE`,
-    )
-
     for (const item of order.items) {
-      release.run({
-        sku: item.sku,
-        quantity: item.quantity,
-        updatedAt: timestamp,
-      })
+      releaseReservedStock(item.sku, item.quantity, timestamp)
     }
 
     return getOrderById(id)
   })
 
   return cancel()
+}
+
+export function fulfillOrder(id: string): Order {
+  const order = getOrderById(id)
+
+  if (order.status === 'fulfilled') {
+    return order
+  }
+
+  if (order.status !== 'confirmed') {
+    throw new AppError(
+      409,
+      'ORDER_NOT_FULFILLABLE',
+      `Only confirmed orders can be fulfilled (current: ${order.status})`,
+    )
+  }
+
+  const timestamp = nowIso()
+
+  const fulfill = db.transaction(() => {
+    db.prepare(
+      `UPDATE orders SET status = 'fulfilled', updated_at = @updatedAt WHERE id = @id`,
+    ).run({ id, updatedAt: timestamp })
+
+    for (const item of order.items) {
+      fulfillReservedStock(item.sku, item.quantity, timestamp)
+    }
+
+    return getOrderById(id)
+  })
+
+  return fulfill()
 }

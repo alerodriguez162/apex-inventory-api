@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { RequestHandler } from 'express'
 import { AppError } from './errors/app-error.js'
-import type { Pagination } from './types/domain.js'
+import type { Pagination, ProductSort } from './types/domain.js'
 
 export const createProductSchema = z.object({
   sku: z
@@ -15,6 +15,20 @@ export const createProductSchema = z.object({
   priceCents: z.number().int().min(0).max(100_000_000),
   initialStock: z.number().int().min(0).max(1_000_000).optional(),
 })
+
+export const updateProductSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    description: z.string().trim().max(500).nullish(),
+    priceCents: z.number().int().min(0).max(100_000_000).optional(),
+  })
+  .refine(
+    (body) =>
+      body.name !== undefined ||
+      body.description !== undefined ||
+      body.priceCents !== undefined,
+    { message: 'Provide at least one of name, description, or priceCents' },
+  )
 
 export const updateInventorySchema = z
   .object({
@@ -40,6 +54,15 @@ export const createOrderSchema = z.object({
     .max(50),
 })
 
+const PRODUCT_SORTS = new Set<ProductSort>([
+  'created_at_desc',
+  'created_at_asc',
+  'name_asc',
+  'name_desc',
+  'price_asc',
+  'price_desc',
+])
+
 export function parsePagination(query: Record<string, unknown>): Pagination {
   const pageRaw = query.page === undefined ? 1 : Number(query.page)
   const limitRaw = query.limit === undefined ? 20 : Number(query.limit)
@@ -53,6 +76,18 @@ export function parsePagination(query: Record<string, unknown>): Pagination {
   }
 
   return { page: pageRaw, limit: limitRaw }
+}
+
+export function parseProductSort(query: Record<string, unknown>): ProductSort {
+  const raw = typeof query.sort === 'string' ? query.sort : 'created_at_desc'
+  if (!PRODUCT_SORTS.has(raw as ProductSort)) {
+    throw new AppError(
+      400,
+      'VALIDATION_ERROR',
+      `sort must be one of: ${[...PRODUCT_SORTS].join(', ')}`,
+    )
+  }
+  return raw as ProductSort
 }
 
 export function validateBody<T>(schema: z.ZodType<T>): RequestHandler {

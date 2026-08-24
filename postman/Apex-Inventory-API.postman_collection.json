@@ -39,6 +39,14 @@
             "header": [],
             "url": "{{baseUrl}}/api/docs/openapi.json"
           }
+        },
+        {
+          "name": "Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/stats?threshold=5"
+          }
         }
       ]
     },
@@ -75,7 +83,19 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products?page=1&limit=20&q=tee"
+            "url": "{{baseUrl}}/api/v1/products?page=1&limit=20&q=tee&sort=price_asc"
+          }
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coast tee (updated)\",\n  \"priceCents\": 2900\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}"
           }
         },
         {
@@ -179,6 +199,14 @@
             "method": "POST",
             "header": [],
             "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/cancellation"
+          }
+        },
+        {
+          "name": "Fulfill order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/fulfillment"
           }
         }
       ]
