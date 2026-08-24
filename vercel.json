@@ -1,9 +1,16 @@
 {
   "version": 2,
-  "framework": null,
-  "installCommand": "npm install",
-  "buildCommand": "npm run build",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
+  "installCommand": "npm install && npm rebuild better-sqlite3",
+  "builds": [
+    {
+      "src": "api/index.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["openapi/**"]
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "api/index.ts" }
   ]
 }

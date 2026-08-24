@@ -12,3 +12,4 @@ coverage/
 .vercel/
 data/
 :memory:
+.vercel
