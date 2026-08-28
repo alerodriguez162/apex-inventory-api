@@ -337,20 +337,25 @@ export function updateInventory(
   return getInventoryBySku(sku)
 }
 
-export function listRestockAlerts(pagination: Pagination): Paginated<RestockAlert> {
-  const where = '(quantity - reserved) <= reorder_point'
-  const total = (
-    db.prepare(`SELECT COUNT(*) AS count FROM inventory WHERE ${where}`).get() as {
-      count: number
-    }
+const RESTOCK_ALERT_WHERE = '(quantity - reserved) <= reorder_point'
+
+export function countRestockAlerts(): number {
+  return (
+    db
+      .prepare(`SELECT COUNT(*) AS count FROM inventory WHERE ${RESTOCK_ALERT_WHERE}`)
+      .get() as { count: number }
   ).count
+}
+
+export function listRestockAlerts(pagination: Pagination): Paginated<RestockAlert> {
+  const total = countRestockAlerts()
 
   const offset = (pagination.page - 1) * pagination.limit
   const rows = db
     .prepare(
       `SELECT sku, quantity, reserved, reorder_point, updated_at
        FROM inventory
-       WHERE ${where}
+       WHERE ${RESTOCK_ALERT_WHERE}
        ORDER BY (quantity - reserved) ASC, sku ASC
        LIMIT @limit OFFSET @offset`,
     )
