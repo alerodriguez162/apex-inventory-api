@@ -13,7 +13,13 @@ export type InventoryItem = {
   quantity: number
   reserved: number
   available: number
+  reorderPoint: number
+  suggestedRestockQty: number
   updatedAt: string
+}
+
+export type RestockAlert = InventoryItem & {
+  reason: 'at_or_below_reorder_point'
 }
 
 export type OrderStatus = 'pending' | 'confirmed' | 'cancelled' | 'fulfilled'
@@ -40,6 +46,7 @@ export type CreateProductInput = {
   description?: string | null
   priceCents: number
   initialStock?: number
+  reorderPoint?: number
 }
 
 export type UpdateProductInput = {
@@ -51,6 +58,7 @@ export type UpdateProductInput = {
 export type UpdateInventoryInput = {
   quantity?: number
   delta?: number
+  reorderPoint?: number
 }
 
 export type CreateOrderInput = {
@@ -88,6 +96,7 @@ export type ApiStats = {
     unitsReserved: number
     unitsAvailable: number
     lowStockSkus: number
+    restockAlerts: number
   }
   orders: Record<OrderStatus, number>
 }

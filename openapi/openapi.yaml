@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Apex Inventory & Order Management API
-  version: 1.1.0
+  version: 1.2.0
   description: |
     Week 3 bench project — products, inventory, and orders with atomic stock reservation,
     fulfillment, pagination, and idempotent creates.
@@ -119,6 +119,17 @@ paths:
       responses:
         '200':
           description: Paginated inventory
+  /api/v1/inventory/alerts:
+    get:
+      tags: [Inventory]
+      summary: List restock alerts
+      description: SKUs whose available quantity is at or below their reorder point.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Paginated restock alerts
   /api/v1/inventory/{sku}:
     get:
       tags: [Inventory]
@@ -258,6 +269,7 @@ components:
         description: { type: string, nullable: true }
         priceCents: { type: integer, minimum: 0 }
         initialStock: { type: integer, minimum: 0 }
+        reorderPoint: { type: integer, minimum: 0, default: 5 }
     UpdateProduct:
       type: object
       properties:
@@ -269,6 +281,7 @@ components:
       properties:
         quantity: { type: integer, minimum: 0 }
         delta: { type: integer }
+        reorderPoint: { type: integer, minimum: 0 }
     CreateOrder:
       type: object
       required: [items]

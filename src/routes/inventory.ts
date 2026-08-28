@@ -5,6 +5,7 @@ import { methodNotAllowed } from '../middleware/method-not-allowed.js'
 import {
   getInventoryBySku,
   listInventory,
+  listRestockAlerts,
   updateInventory,
 } from '../services/products.js'
 import { parsePagination, updateInventorySchema, validateBody } from '../validation.js'
@@ -25,6 +26,16 @@ inventoryRouter
     }
 
     const result = listInventory(pagination, { lowStock, threshold })
+    setPaginationHeaders(req, res, result)
+    res.json(result)
+  })
+  .all(methodNotAllowed(['GET']))
+
+inventoryRouter
+  .route('/alerts')
+  .get((req, res) => {
+    const pagination = parsePagination(req.query as Record<string, unknown>)
+    const result = listRestockAlerts(pagination)
     setPaginationHeaders(req, res, result)
     res.json(result)
   })

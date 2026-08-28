@@ -51,6 +51,7 @@ db.exec(`
     sku TEXT PRIMARY KEY COLLATE NOCASE,
     quantity INTEGER NOT NULL CHECK (quantity >= 0),
     reserved INTEGER NOT NULL DEFAULT 0 CHECK (reserved >= 0),
+    reorder_point INTEGER NOT NULL DEFAULT 5 CHECK (reorder_point >= 0),
     updated_at TEXT NOT NULL,
     FOREIGN KEY (sku) REFERENCES products(sku) ON DELETE CASCADE ON UPDATE CASCADE,
     CHECK (reserved <= quantity)
@@ -85,6 +86,7 @@ db.exec(`
 
 migrateOrdersStatusConstraint()
 migrateInventoryCheck()
+migrateReorderPoint()
 
 function migrateOrdersStatusConstraint(): void {
   const row = db
@@ -131,16 +133,26 @@ function migrateInventoryCheck(): void {
       sku TEXT PRIMARY KEY COLLATE NOCASE,
       quantity INTEGER NOT NULL CHECK (quantity >= 0),
       reserved INTEGER NOT NULL DEFAULT 0 CHECK (reserved >= 0),
+      reorder_point INTEGER NOT NULL DEFAULT 5 CHECK (reorder_point >= 0),
       updated_at TEXT NOT NULL,
       FOREIGN KEY (sku) REFERENCES products(sku) ON DELETE CASCADE ON UPDATE CASCADE,
       CHECK (reserved <= quantity)
     );
-    INSERT INTO inventory__mig (sku, quantity, reserved, updated_at)
-    SELECT sku, quantity, reserved, updated_at FROM inventory;
+    INSERT INTO inventory__mig (sku, quantity, reserved, reorder_point, updated_at)
+    SELECT sku, quantity, reserved, 5, updated_at FROM inventory;
     DROP TABLE inventory;
     ALTER TABLE inventory__mig RENAME TO inventory;
     COMMIT;
   `)
+}
+
+function migrateReorderPoint(): void {
+  const cols = db.prepare(`PRAGMA table_info(inventory)`).all() as Array<{ name: string }>
+  if (cols.some((col) => col.name === 'reorder_point')) {
+    return
+  }
+
+  db.exec(`ALTER TABLE inventory ADD COLUMN reorder_point INTEGER NOT NULL DEFAULT 5`)
 }
 
 export function nowIso(): string {

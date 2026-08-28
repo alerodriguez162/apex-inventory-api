@@ -49,7 +49,8 @@ test/          Node.js test runner suites
 | GET/POST | `/api/v1/products` | Catalog (`q`, `sku`, `sort`, pagination) |
 | GET/PATCH | `/api/v1/products/:id` | Product by id / update fields |
 | GET | `/api/v1/inventory` | Stock list (`lowStock`) |
-| GET/PATCH | `/api/v1/inventory/:sku` | Stock by SKU |
+| GET | `/api/v1/inventory/alerts` | SKUs at or below their reorder point |
+| GET/PATCH | `/api/v1/inventory/:sku` | Stock by SKU (`quantity`, `delta`, `reorderPoint`) |
 | GET/POST | `/api/v1/orders` | Orders (+ atomic reserve) |
 | GET | `/api/v1/orders/:id` | Order by id |
 | POST | `/api/v1/orders/:id/cancellation` | Cancel + release reservation |
@@ -109,3 +110,9 @@ npx vercel --prod
 ```
 
 Set `PORT` / `CORS_ORIGIN` / `RATE_LIMIT_*` as needed in the Vercel project env.
+
+## AI PR Review
+
+Pull requests are reviewed automatically by [`alerodriguez162/ai-pr-reviewer`](https://github.com/alerodriguez162/ai-pr-reviewer).
+
+Add a repository secret named `OPENAI_API_KEY`. The workflow uses `GITHUB_TOKEN` for comments (`pull-requests: write`).

@@ -114,6 +114,7 @@ describe('API improvements', () => {
     assert.equal(res.body.products, 1)
     assert.equal(res.body.inventory.skus, 1)
     assert.equal(res.body.inventory.lowStockSkus, 1)
+    assert.equal(res.body.inventory.restockAlerts, 1)
     assert.equal(res.body.orders.confirmed, 0)
   })
 })

@@ -8,6 +8,8 @@ import type {
   Pagination,
   Product,
   ProductSort,
+  RestockAlert,
+  UpdateInventoryInput,
   UpdateProductInput,
 } from '../types/domain.js'
 
@@ -25,6 +27,7 @@ type InventoryRow = {
   sku: string
   quantity: number
   reserved: number
+  reorder_point: number
   updated_at: string
 }
 
@@ -40,12 +43,19 @@ function mapProduct(row: ProductRow): Product {
   }
 }
 
+function suggestedRestockQty(available: number, reorderPoint: number): number {
+  return Math.max(0, reorderPoint * 2 - available)
+}
+
 function mapInventory(row: InventoryRow): InventoryItem {
+  const available = row.quantity - row.reserved
   return {
     sku: row.sku,
     quantity: row.quantity,
     reserved: row.reserved,
-    available: row.quantity - row.reserved,
+    available,
+    reorderPoint: row.reorder_point,
+    suggestedRestockQty: suggestedRestockQty(available, row.reorder_point),
     updatedAt: row.updated_at,
   }
 }
@@ -157,11 +167,12 @@ export function createProduct(input: CreateProductInput): Product {
     })
 
     db.prepare(
-      `INSERT INTO inventory (sku, quantity, reserved, updated_at)
-       VALUES (@sku, @quantity, 0, @updatedAt)`,
+      `INSERT INTO inventory (sku, quantity, reserved, reorder_point, updated_at)
+       VALUES (@sku, @quantity, 0, @reorderPoint, @updatedAt)`,
     ).run({
       sku: input.sku.trim(),
       quantity: initialStock,
+      reorderPoint: input.reorderPoint ?? 5,
       updatedAt: timestamp,
     })
   })
@@ -218,7 +229,7 @@ export function listInventory(
   const offset = (pagination.page - 1) * pagination.limit
   const rows = db
     .prepare(
-      `SELECT sku, quantity, reserved, updated_at
+      `SELECT sku, quantity, reserved, reorder_point, updated_at
        FROM inventory
        ${where}
        ORDER BY sku ASC
@@ -240,7 +251,7 @@ export function listInventory(
 export function getInventoryBySku(sku: string): InventoryItem {
   const row = db
     .prepare(
-      `SELECT sku, quantity, reserved, updated_at
+      `SELECT sku, quantity, reserved, reorder_point, updated_at
        FROM inventory WHERE sku = ? COLLATE NOCASE`,
     )
     .get(sku) as InventoryRow | undefined
@@ -254,24 +265,24 @@ export function getInventoryBySku(sku: string): InventoryItem {
 
 export function updateInventory(
   sku: string,
-  input: { quantity?: number; delta?: number },
+  input: UpdateInventoryInput,
 ): InventoryItem {
   const current = getInventoryBySku(sku)
   let nextQuantity = current.quantity
+  const nextReorderPoint = input.reorderPoint ?? current.reorderPoint
+  const stockChanging = input.quantity !== undefined || input.delta !== undefined
 
   if (input.quantity !== undefined) {
     nextQuantity = input.quantity
   } else if (input.delta !== undefined) {
     nextQuantity = current.quantity + input.delta
-  } else {
-    throw new AppError(400, 'VALIDATION_ERROR', 'Provide quantity or delta')
   }
 
   if (nextQuantity < 0) {
     throw new AppError(400, 'INVALID_STOCK', 'Stock quantity cannot be negative')
   }
 
-  if (nextQuantity < current.reserved) {
+  if (stockChanging && nextQuantity < current.reserved) {
     throw new AppError(
       409,
       'STOCK_BELOW_RESERVED',
@@ -282,10 +293,18 @@ export function updateInventory(
   const timestamp = nowIso()
   const result = db
     .prepare(
-      `UPDATE inventory SET quantity = @quantity, updated_at = @updatedAt
+      `UPDATE inventory
+       SET quantity = @quantity,
+           reorder_point = @reorderPoint,
+           updated_at = @updatedAt
        WHERE sku = @sku COLLATE NOCASE AND reserved <= @quantity`,
     )
-    .run({ sku, quantity: nextQuantity, updatedAt: timestamp })
+    .run({
+      sku,
+      quantity: nextQuantity,
+      reorderPoint: nextReorderPoint,
+      updatedAt: timestamp,
+    })
 
   if (result.changes === 0) {
     throw new AppError(
@@ -296,6 +315,39 @@ export function updateInventory(
   }
 
   return getInventoryBySku(sku)
+}
+
+export function listRestockAlerts(pagination: Pagination): Paginated<RestockAlert> {
+  const where = '(quantity - reserved) <= reorder_point'
+  const total = (
+    db.prepare(`SELECT COUNT(*) AS count FROM inventory WHERE ${where}`).get() as {
+      count: number
+    }
+  ).count
+
+  const offset = (pagination.page - 1) * pagination.limit
+  const rows = db
+    .prepare(
+      `SELECT sku, quantity, reserved, reorder_point, updated_at
+       FROM inventory
+       WHERE ${where}
+       ORDER BY (quantity - reserved) ASC, sku ASC
+       LIMIT @limit OFFSET @offset`,
+    )
+    .all({ limit: pagination.limit, offset }) as InventoryRow[]
+
+  return {
+    data: rows.map((row) => ({
+      ...mapInventory(row),
+      reason: 'at_or_below_reorder_point' as const,
+    })),
+    pagination: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pagination.limit) || 1),
+    },
+  }
 }
 
 /** Atomically reserve stock; safe under concurrent writers in the same process. */
