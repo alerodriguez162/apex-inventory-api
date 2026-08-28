@@ -1,5 +1,7 @@
 name: AI PR Review
 
+# OPENAI_API_KEY is read from repository Secrets; GitHub Actions masks secret values in logs.
+
 on:
   pull_request:
     types:

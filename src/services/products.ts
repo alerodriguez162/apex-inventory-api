@@ -268,10 +268,30 @@ export function updateInventory(
   input: UpdateInventoryInput,
 ): InventoryItem {
   const current = getInventoryBySku(sku)
-  let nextQuantity = current.quantity
-  const nextReorderPoint = input.reorderPoint ?? current.reorderPoint
   const stockChanging = input.quantity !== undefined || input.delta !== undefined
+  const reorderChanging = input.reorderPoint !== undefined
 
+  if (!stockChanging && !reorderChanging) {
+    return current
+  }
+
+  const timestamp = nowIso()
+
+  if (!stockChanging && reorderChanging) {
+    db.prepare(
+      `UPDATE inventory
+       SET reorder_point = @reorderPoint,
+           updated_at = @updatedAt
+       WHERE sku = @sku COLLATE NOCASE`,
+    ).run({
+      sku,
+      reorderPoint: input.reorderPoint,
+      updatedAt: timestamp,
+    })
+    return getInventoryBySku(sku)
+  }
+
+  let nextQuantity = current.quantity
   if (input.quantity !== undefined) {
     nextQuantity = input.quantity
   } else if (input.delta !== undefined) {
@@ -282,7 +302,7 @@ export function updateInventory(
     throw new AppError(400, 'INVALID_STOCK', 'Stock quantity cannot be negative')
   }
 
-  if (stockChanging && nextQuantity < current.reserved) {
+  if (nextQuantity < current.reserved) {
     throw new AppError(
       409,
       'STOCK_BELOW_RESERVED',
@@ -290,7 +310,7 @@ export function updateInventory(
     )
   }
 
-  const timestamp = nowIso()
+  const nextReorderPoint = input.reorderPoint ?? current.reorderPoint
   const result = db
     .prepare(
       `UPDATE inventory

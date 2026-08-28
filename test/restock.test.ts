@@ -67,4 +67,22 @@ describe('Restock alerts', () => {
     assert.equal(res.status, 200)
     assert.ok(Array.isArray(res.body.data))
   })
+
+  it('updates stock and reorder point together without coupling reorder-only to quantity guards', async () => {
+    await request(app).post('/api/v1/products').send({
+      sku: 'COMBO-1',
+      name: 'Combo',
+      priceCents: 1500,
+      initialStock: 10,
+      reorderPoint: 5,
+    })
+
+    const patched = await request(app)
+      .patch('/api/v1/inventory/COMBO-1')
+      .send({ delta: 4, reorderPoint: 12 })
+    assert.equal(patched.status, 200)
+    assert.equal(patched.body.quantity, 14)
+    assert.equal(patched.body.reorderPoint, 12)
+    assert.equal(patched.body.suggestedRestockQty, 10)
+  })
 })
