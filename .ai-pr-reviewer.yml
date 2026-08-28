@@ -1,0 +1,47 @@
+focus:
+  - stock quantity, reserved, and available correctness
+  - reorderPoint and restock alerts
+  - SKU identity and uniqueness
+  - authentication and authorization on inventory mutations
+  - OpenAPI contract alignment with routes and response shapes
+
+ignore:
+  categories:
+    - code_quality
+  paths:
+    - test/**
+    - README.md
+    - docs/**
+    - .github/workflows/**
+  titles:
+    - Missing JSDoc
+    - Prefer const
+    - Use of Secrets in CI/CD Workflow
+    - Exposure of Sensitive Data in CI/CD Workflow
+
+style: >
+  Prefer findings grounded in the diff. Call out API contract drift, auth gaps,
+  and inventory math mistakes. Skip style-only nits in tests and docs.
+  Do not flag referencing secrets.OPENAI_API_KEY in GitHub Actions workflows;
+  that is expected and secrets are masked in logs.
+
+domainNotes:
+  - available = quantity - reserved. Restock decisions must use available, not raw quantity.
+  - RestockAlert is an InventoryItem with reason at_or_below_reorder_point.
+  - Alerts fire when available stock is at or below reorderPoint.
+  - suggestedRestockQty is max(0, reorderPoint * 2 - available).
+  - SKUs are case-insensitive unique identifiers.
+  - Keep OpenAPI, validation, and route behavior in sync for stock, reorderPoint, and alerts.
+  - OPENAI_API_KEY in .github/workflows via repository Secrets is intentional, not exposure.
+
+context:
+  enabled: true
+  maxDepth: 2
+  maxFiles: 20
+  followImports: true
+  findConsumers: true
+  includePaths:
+    - src/**
+  excludePaths:
+    - test/**
+    - docs/**
