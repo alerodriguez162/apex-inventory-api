@@ -26,6 +26,9 @@ v1Router
           href: '/api/v1/inventory',
           status: 'available',
           methods: ['GET', 'PATCH'],
+          actions: {
+            alerts: 'GET /api/v1/inventory/alerts',
+          },
         },
         orders: {
           href: '/api/v1/orders',

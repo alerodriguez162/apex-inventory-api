@@ -15,7 +15,8 @@ export function getApiStats(lowStockThreshold = 5): ApiStats {
          COALESCE(SUM(quantity), 0) AS unitsOnHand,
          COALESCE(SUM(reserved), 0) AS unitsReserved,
          COALESCE(SUM(quantity - reserved), 0) AS unitsAvailable,
-         COALESCE(SUM(CASE WHEN (quantity - reserved) <= @threshold THEN 1 ELSE 0 END), 0) AS lowStockSkus
+         COALESCE(SUM(CASE WHEN (quantity - reserved) <= @threshold THEN 1 ELSE 0 END), 0) AS lowStockSkus,
+         COALESCE(SUM(CASE WHEN (quantity - reserved) <= reorder_point THEN 1 ELSE 0 END), 0) AS restockAlerts
        FROM inventory`,
     )
     .get({ threshold: lowStockThreshold }) as {
@@ -24,6 +25,7 @@ export function getApiStats(lowStockThreshold = 5): ApiStats {
     unitsReserved: number
     unitsAvailable: number
     lowStockSkus: number
+    restockAlerts: number
   }
 
   const orderCounts = Object.fromEntries(ORDER_STATUSES.map((s) => [s, 0])) as Record<
@@ -47,6 +49,7 @@ export function getApiStats(lowStockThreshold = 5): ApiStats {
       unitsReserved: inventory.unitsReserved,
       unitsAvailable: inventory.unitsAvailable,
       lowStockSkus: inventory.lowStockSkus,
+      restockAlerts: inventory.restockAlerts,
     },
     orders: orderCounts,
   }

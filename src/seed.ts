@@ -21,6 +21,7 @@ const seed = [
     description: 'Canvas tote',
     priceCents: 4200,
     initialStock: 12,
+    reorderPoint: 15,
   },
 ]
 

@@ -14,6 +14,7 @@ export const createProductSchema = z.object({
   description: z.string().trim().max(500).nullish(),
   priceCents: z.number().int().min(0).max(100_000_000),
   initialStock: z.number().int().min(0).max(1_000_000).optional(),
+  reorderPoint: z.number().int().min(0).max(1_000_000).optional(),
 })
 
 export const updateProductSchema = z
@@ -34,10 +35,17 @@ export const updateInventorySchema = z
   .object({
     quantity: z.number().int().min(0).max(1_000_000).optional(),
     delta: z.number().int().min(-1_000_000).max(1_000_000).optional(),
+    reorderPoint: z.number().int().min(0).max(1_000_000).optional(),
   })
-  .refine((body) => body.quantity !== undefined || body.delta !== undefined, {
-    message: 'Provide quantity or delta',
-  })
+  .refine(
+    (body) =>
+      body.quantity !== undefined ||
+      body.delta !== undefined ||
+      body.reorderPoint !== undefined,
+    {
+      message: 'Provide quantity, delta, or reorderPoint',
+    },
+  )
   .refine((body) => !(body.quantity !== undefined && body.delta !== undefined), {
     message: 'Provide either quantity or delta, not both',
   })
