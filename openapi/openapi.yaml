@@ -130,6 +130,21 @@ paths:
       responses:
         '200':
           description: Paginated restock alerts
+  /api/v1/inventory/alerts/count:
+    get:
+      tags: [Inventory]
+      summary: Count restock alerts
+      description: Number of SKUs whose available quantity is at or below their reorder point.
+      responses:
+        '200':
+          description: Restock alert count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count]
+                properties:
+                  count: { type: integer, minimum: 0 }
   /api/v1/inventory/{sku}:
     get:
       tags: [Inventory]

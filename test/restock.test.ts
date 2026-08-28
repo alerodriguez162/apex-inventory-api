@@ -68,6 +68,34 @@ describe('Restock alerts', () => {
     assert.ok(Array.isArray(res.body.data))
   })
 
+  it('returns the restock alert count without pagination', async () => {
+    await request(app).post('/api/v1/products').send({
+      sku: 'COUNT-A',
+      name: 'Low A',
+      priceCents: 500,
+      initialStock: 2,
+    })
+    await request(app).post('/api/v1/products').send({
+      sku: 'COUNT-B',
+      name: 'Low B',
+      priceCents: 600,
+      initialStock: 1,
+    })
+    await request(app).post('/api/v1/products').send({
+      sku: 'COUNT-OK',
+      name: 'Healthy',
+      priceCents: 700,
+      initialStock: 50,
+    })
+
+    const res = await request(app).get('/api/v1/inventory/alerts/count')
+    assert.equal(res.status, 200)
+    assert.equal(res.body.count, 2)
+
+    const alerts = await request(app).get('/api/v1/inventory/alerts')
+    assert.equal(alerts.body.pagination.total, res.body.count)
+  })
+
   it('updates stock and reorder point together without coupling reorder-only to quantity guards', async () => {
     await request(app).post('/api/v1/products').send({
       sku: 'COMBO-1',

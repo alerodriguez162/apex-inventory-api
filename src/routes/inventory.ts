@@ -3,6 +3,7 @@ import { AppError } from '../errors/app-error.js'
 import { setPaginationHeaders } from '../http/pagination.js'
 import { methodNotAllowed } from '../middleware/method-not-allowed.js'
 import {
+  countRestockAlerts,
   getInventoryBySku,
   listInventory,
   listRestockAlerts,
@@ -38,6 +39,13 @@ inventoryRouter
     const result = listRestockAlerts(pagination)
     setPaginationHeaders(req, res, result)
     res.json(result)
+  })
+  .all(methodNotAllowed(['GET']))
+
+inventoryRouter
+  .route('/alerts/count')
+  .get((_req, res) => {
+    res.json({ count: countRestockAlerts() })
   })
   .all(methodNotAllowed(['GET']))
 
