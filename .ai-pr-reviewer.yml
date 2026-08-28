@@ -1,0 +1,41 @@
+focus:
+  - stock quantity, reserved, and available correctness
+  - reorderPoint and restock alerts
+  - SKU identity and uniqueness
+  - authentication and authorization on inventory mutations
+  - OpenAPI contract alignment with routes and response shapes
+
+ignore:
+  categories:
+    - code_quality
+  paths:
+    - test/**
+    - README.md
+    - docs/**
+  titles:
+    - Missing JSDoc
+    - Prefer const
+
+style: >
+  Prefer findings grounded in the diff. Call out API contract drift, auth gaps,
+  and inventory math mistakes. Skip style-only nits in tests and docs.
+
+domainNotes:
+  - available = quantity - reserved. Restock decisions must use available, not raw quantity.
+  - RestockAlert is an InventoryItem with reason at_or_below_reorder_point.
+  - Alerts fire when available stock is at or below reorderPoint.
+  - suggestedRestockQty is max(0, reorderPoint * 2 - available).
+  - SKUs are case-insensitive unique identifiers.
+  - Keep OpenAPI, validation, and route behavior in sync for stock, reorderPoint, and alerts.
+
+context:
+  enabled: true
+  maxDepth: 2
+  maxFiles: 20
+  followImports: true
+  findConsumers: true
+  includePaths:
+    - src/**
+  excludePaths:
+    - test/**
+    - docs/**
